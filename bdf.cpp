@@ -68,12 +68,12 @@ public:
         m_jacobi.m_v -= boost::numeric::ublas::identity_matrix< value_type >( x.size() );
         
         solve( m_b.m_v , m_jacobi.m_v );
-        m_x.m_v = (4.0 *x1)- (3.0*x) - m_b.m_v;//x(k) after first Newton iteration
+        m_x.m_v = (4.0 *x1)- (3.0*x) + m_b.m_v;//x(k) after first Newton iteration
         
          while( boost::numeric::ublas::norm_2( m_b.m_v ) > m_epsilon )
         {
            deriv_func( m_x.m_v , m_dxdt.m_v , t );
-           m_b.m_v = (4.0 *x1)- (3.0*x) - m_x.m_v + 2.0 * dt * m_dxdt.m_v;
+           m_b.m_v = -(4.0 *x1)+ (3.0*x) + m_x.m_v + 2.0 * dt * m_dxdt.m_v;
            solve( m_b.m_v , m_jacobi.m_v );
             m_x.m_v -= m_b.m_v;
         }
