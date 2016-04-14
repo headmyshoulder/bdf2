@@ -1,5 +1,3 @@
-#include <utility>
-
 #include <boost/numeric/odeint/util/bind.hpp>
 #include <boost/numeric/odeint/util/unwrap_reference.hpp>
 #include <boost/numeric/odeint/stepper/stepper_categories.hpp>
@@ -12,6 +10,8 @@
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/lu.hpp>
+
+#include <utility>
 
 namespace boost {
 namespace numeric {
@@ -41,7 +41,7 @@ public:
     { }
     
     template< typename System >
-    void do_step( System system , state_type x , time_type t , time_type dt )
+    void do_step( System system , state_type& x , time_type t , time_type dt )
     {
         typedef typename odeint::unwrap_reference< System >::type system_type;
         typedef typename odeint::unwrap_reference< typename system_type::first_type >::type deriv_func_type;
@@ -78,7 +78,7 @@ public:
             m_x.m_v -= m_b.m_v;
         }
 
-       x = m_x.m_v;
+        x = m_x.m_v;
     } 
 private:
 
@@ -132,14 +132,12 @@ struct stiff_system
 
 struct stiff_system_jacobi
 {
-     void operator()( const vector_type & /* x */ , matrix_type &J , const double & /* t */ , vector_type &dfdt )
+     void operator()( const vector_type & /* x */ , matrix_type &J , const double & /* t */ )
     {
         J( 0 , 0 ) = -101.0;
         J( 0 , 1 ) = -100.0;
         J( 1 , 0 ) = 1.0;
         J( 1 , 1 ) = 0.0;
-        dfdt[0] = 0.0;
-        dfdt[1] = 0.0;
     }
 };
 using namespace std;
@@ -149,6 +147,10 @@ int main( int argc , char** argv )
     double t = 0.0;
     double dt = 0.01;
     boost::numeric::odeint::bdf2<double> solver;
-    solver.do_step( make_pair( stiff_system, stiff_system_jacobi ), x , t , dt );
+    for( size_t i=0 ; i<100 ; ++i , t+= dt )
+    {
+        solver.do_step( make_pair( stiff_system() , stiff_system_jacobi() ), x , t , dt );
+        cout << t << " " << x[0] << " " << x[1] << "\n";
+    }
     return 0;
 }
