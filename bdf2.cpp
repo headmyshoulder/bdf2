@@ -51,31 +51,39 @@ public:
         jacobi_func_type &jacobi_func = sys.second;   
         m_resizer.adjust_size( x , detail::bind( &stepper_type::template resize_impl<state_type> , detail::ref( *this ) , detail::_1 ) );
          
-        state_type x1;// x1 for storing x(k+1)
+        state_type x1 = x;// x1 for storing x(k+1)
+        // std::cout << x1[0] << " " << x1[1] << "\n";
         implicit_euler< double > imp_euler;
-        imp_euler.do_step(system, x, t, dt);
-        x1 = x; //x(k+1) computed from above line for x(k) = 4*x(k+1) - 3*x(k+2) + 2*dt*x'(k+2)
+        imp_euler.do_step(system, x1, t, dt);
+        //x(k+1) computed from above line for x(k) = 4*x(k+1) - 3*x(k+2) + 2*dt*x'(k+2)
+        
+        // std::cout << x1[0] << " " << x1[1] << "\n";
         
         
         for( size_t i=0 ; i<x.size() ; ++i )
             m_pm.m_v[i] = i;
         
         t +=dt;// t = t0 + 2*dt for x(k+2) and x'(k+2)
-        deriv_func( x , m_dxdt.m_v , t ); //m_dxdt.m_v is x'(k+2)
+        deriv_func( x1 , m_dxdt.m_v , t ); //m_dxdt.m_v is x'(k+2)
         m_b.m_v = 2.0 * dt * m_dxdt.m_v;
-        jacobi_func( x , m_jacobi.m_v  , t );
+        jacobi_func( x1 , m_jacobi.m_v  , t );
         m_jacobi.m_v *= dt;
         m_jacobi.m_v -= boost::numeric::ublas::identity_matrix< value_type >( x.size() );
         
         solve( m_b.m_v , m_jacobi.m_v );
         m_x.m_v = (4.0 *x1)- (3.0*x) + m_b.m_v;//x(k) after first Newton iteration
         
-         while( boost::numeric::ublas::norm_2( m_b.m_v ) > m_epsilon )
+        std::cout << "Before loop : " << m_x.m_v[0] << " " << m_x.m_v[1] << " " << m_b.m_v[0] << " " << m_b.m_v[1] << "\n";
+        
+        
+        while( boost::numeric::ublas::norm_2( m_b.m_v ) > m_epsilon )
         {
-           deriv_func( m_x.m_v , m_dxdt.m_v , t );
-           m_b.m_v = -(4.0 *x1)+ (3.0*x) + m_x.m_v + 2.0 * dt * m_dxdt.m_v;
-           solve( m_b.m_v , m_jacobi.m_v );
+            deriv_func( m_x.m_v , m_dxdt.m_v , t );
+            m_b.m_v = -(4.0 *x1)+ (3.0*x) + m_x.m_v + 2.0 * dt * m_dxdt.m_v;
+            solve( m_b.m_v , m_jacobi.m_v );
             m_x.m_v -= m_b.m_v;
+            
+            std::cout << "Inside loop : " << m_x.m_v[0] << " " << m_x.m_v[1] << " " << m_b.m_v[0] << " " << m_b.m_v[1] << "\n";
         }
 
         x = m_x.m_v;
@@ -145,12 +153,12 @@ int main( int argc , char** argv )
 {  
     vector_type x( 2.0, 1.0);
     double t = 0.0;
-    double dt = 0.01;
+    double dt = 0.0001;
     boost::numeric::odeint::bdf2<double> solver;
     for( size_t i=0 ; i<100 ; ++i , t+= dt )
     {
         solver.do_step( make_pair( stiff_system() , stiff_system_jacobi() ), x , t , dt );
-        cout << t << " " << x[0] << " " << x[1] << "\n";
+        cout << t << " " << x[0] << " " << x[1] << "\n\n\n";
     }
     return 0;
 }
